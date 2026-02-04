@@ -42,6 +42,15 @@ sections:
         entities:
           - sensor.temperature
       # Drag and drop works!
+
+# Optional: Loose cards (appear at bottom in edit mode)
+cards:
+  - type: button
+    entity: light.test
+    # This card appears in "Unassigned Cards" at bottom in edit mode
+  - type: entities
+    entities: [sensor.test]
+    # Drag these into sections!
 ```
 
 ## How It Would Work
@@ -183,7 +192,20 @@ In edit mode, you'll see:
 - **Grid area label** in top-right corner showing the section's position
 - **Hover effects** - border and label change to accent color when hovering
 - **Light background tint** to distinguish sections
-- **Clean appearance** in normal mode - no borders or labels
+- **Loose cards container** at the bottom (orange border) for unassigned cards
+- **Clean appearance** in normal mode - no borders, labels, or loose cards
+
+### Loose Cards (Unassigned Cards)
+
+Just like native sections view, if you have cards at the view level (not in any section), they appear at the bottom in edit mode:
+
+- **Orange dashed border** to distinguish from regular sections
+- **"Unassigned Cards"** header with helpful subtitle
+- **Grid layout** of loose cards
+- **Draggable** into sections above
+- **Only visible in edit mode** - hidden in normal view
+
+This makes it easy to organize cards by dragging them from the loose cards area into your sections!
 
 The visual indicators make it crystal clear which section is which and where they're positioned in your grid!
 

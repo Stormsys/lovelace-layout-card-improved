@@ -165,6 +165,56 @@ class GridLayout extends BaseLayout {
       
       root.appendChild(container);
     }
+    
+    // Add loose cards container in edit mode (cards not in any section)
+    if (isEditMode && this.cards && this.cards.length > 0) {
+      const looseCardsContainer = this._createLooseCardsContainer();
+      root.appendChild(looseCardsContainer);
+    }
+  }
+
+  _createLooseCardsContainer(): HTMLElement {
+    const container = document.createElement("div");
+    container.className = "loose-cards-container";
+    
+    // Header
+    const header = document.createElement("div");
+    header.className = "loose-cards-header";
+    
+    const title = document.createElement("span");
+    title.className = "loose-cards-title";
+    title.textContent = "Unassigned Cards";
+    
+    const subtitle = document.createElement("span");
+    subtitle.className = "loose-cards-subtitle";
+    subtitle.textContent = "Drag these cards into sections above";
+    
+    header.appendChild(title);
+    header.appendChild(subtitle);
+    container.appendChild(header);
+    
+    // Cards container
+    const cardsWrapper = document.createElement("div");
+    cardsWrapper.className = "loose-cards-wrapper";
+    
+    // Add all loose cards (cards at view level)
+    this.cards.forEach((card, index) => {
+      const cardConfig = this._config.cards?.[index];
+      if (cardConfig) {
+        const cardGroup: CardConfigGroup = {
+          card,
+          config: cardConfig,
+          index,
+          show: this._shouldShow(card, cardConfig, index),
+        };
+        const cardEl = this.getCardElement(cardGroup);
+        cardsWrapper.appendChild(cardEl);
+      }
+    });
+    
+    container.appendChild(cardsWrapper);
+    
+    return container;
   }
 
   async _createNativeSection(config: any, index: number) {
@@ -548,6 +598,49 @@ class GridLayout extends BaseLayout {
         .section-container.edit-mode:hover .section-grid-label {
           opacity: 1;
           background: var(--accent-color, #ff9800);
+        }
+        
+        /* Loose cards container */
+        .loose-cards-container {
+          grid-column: 1 / -1;
+          margin-top: 24px;
+          padding: 16px;
+          border: 2px dashed var(--warning-color, #ff9800);
+          border-radius: 8px;
+          background: rgba(255, 152, 0, 0.05);
+        }
+        
+        .loose-cards-header {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          margin-bottom: 12px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid var(--divider-color, #e0e0e0);
+        }
+        
+        .loose-cards-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--warning-color, #ff9800);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .loose-cards-subtitle {
+          font-size: 13px;
+          color: var(--secondary-text-color, #727272);
+          font-style: italic;
+        }
+        
+        .loose-cards-wrapper {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 12px;
+        }
+        
+        .loose-cards-wrapper > * {
+          margin: 0;
         }
       `,
     ];
