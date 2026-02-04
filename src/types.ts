@@ -69,12 +69,8 @@ export interface GridViewConfig extends ViewConfig {
     height?: string;
     mediaquery?: Array<Record<string, any>>;
     custom_css?: string;
-    sections?: {
-      [key: string]: {
-        cards?: Array<CardConfig>;
-        grid_area?: string;
-      };
-    };
+    "grid-template-areas"?: string;
+    [key: string]: any; // Allow any grid-* properties
   };
 }
 

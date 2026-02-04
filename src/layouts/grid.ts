@@ -105,14 +105,16 @@ class GridLayout extends BaseLayout {
     const root = this.shadowRoot.querySelector("#root");
     while (root.firstChild) root.removeChild(root.firstChild);
     
-    // Section-based layout - use sections if defined or auto-detect from grid-template-areas
-    const sections = this._config.layout?.sections || this._autoDetectSections();
-    if (sections && Object.keys(sections).length > 0) {
+    // Auto-detect sections from grid-template-areas
+    const sections = this._autoDetectSections();
+    
+    // Use section-based layout in edit mode if sections detected
+    if (this.lovelace?.editMode && sections && Object.keys(sections).length > 0) {
       this._placeSectionCards(root, sections);
       return;
     }
     
-    // Traditional card placement
+    // Traditional card placement (normal mode or no sections)
     let cards: CardConfigGroup[] = this.cards.map((card, index) => {
       const config = this._config.cards[index];
       return {
@@ -136,9 +138,8 @@ class GridLayout extends BaseLayout {
   }
 
   _autoDetectSections() {
-    // Auto-detect grid areas from grid-template-areas in edit mode
-    if (!this.lovelace?.editMode) return null;
-    
+    // Auto-detect grid areas from grid-template-areas
+    // Always detect if grid-template-areas is defined, not just in edit mode
     const gridTemplateAreas = this._config.layout?.["grid-template-areas"];
     if (!gridTemplateAreas) return null;
     
@@ -155,7 +156,7 @@ class GridLayout extends BaseLayout {
       });
     }
     
-    // Create section configs for each detected area
+    // Create section configs for each detected area - no longer need manual config!
     const sections: Record<string, any> = {};
     areaNames.forEach(name => {
       sections[name] = { grid_area: name };
@@ -228,10 +229,10 @@ class GridLayout extends BaseLayout {
     const addBtn = document.createElement("button");
     addBtn.className = "section-add-btn";
     addBtn.innerHTML = "✕";
-    addBtn.title = "Add card to this section";
-    addBtn.addEventListener("click", (e) => {
+    addBtn.title = `Add card to ${sectionName}`;
+    addBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      this._addCardToSection(sectionName);
+      await this._addCardToSection(sectionName);
     });
     
     headerEl.appendChild(titleEl);
@@ -240,11 +241,31 @@ class GridLayout extends BaseLayout {
     return headerEl;
   }
 
-  _addCardToSection(sectionName: string) {
-    // Dispatch event to trigger card picker with section context
-    this.dispatchEvent(new CustomEvent("ll-create-card", {
-      detail: { section: sectionName }
-    }));
+  async _addCardToSection(sectionName: string) {
+    // Show the card picker and automatically set grid_area when card is added
+    const cardHelpers = await (window as any).loadCardHelpers?.();
+    if (!cardHelpers) return;
+    
+    // Create a custom event that includes the target section
+    const event = new CustomEvent("ll-create-card");
+    this.dispatchEvent(event);
+    
+    // Listen for the next card addition and auto-assign grid_area
+    const handleCardAdded = (e: any) => {
+      if (e.detail?.config) {
+        // Auto-assign the grid_area to the new card
+        if (!e.detail.config.view_layout) {
+          e.detail.config.view_layout = {};
+        }
+        e.detail.config.view_layout.grid_area = sectionName;
+        console.log(`Auto-assigned card to section: ${sectionName}`);
+      }
+      this.removeEventListener("card-added", handleCardAdded);
+    };
+    
+    // Note: This is a simplified approach. Full implementation would need
+    // to intercept the card creation dialog and modify the config before save
+    this.addEventListener("card-added", handleCardAdded);
   }
 
   _getUnassignedCards(assignedIndices: Set<number>): CardConfigGroup[] {

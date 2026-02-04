@@ -37,9 +37,9 @@ In edit mode, grid layouts now support a section-based approach where each grid 
 
 ### How to Use
 
-#### Option A: Explicit Sections Definition
+#### Auto-Detection (Automatic!)
 
-Define sections explicitly in your layout configuration:
+Sections are **automatically detected** from `grid-template-areas` - no manual configuration needed!
 
 ```yaml
 type: custom:grid-layout-improved
@@ -50,15 +50,7 @@ layout:
     "header header header"
     "sidebar main main"
     "footer footer footer"
-  sections:
-    header:
-      grid_area: header
-    sidebar:
-      grid_area: sidebar
-    main:
-      grid_area: main
-    footer:
-      grid_area: footer
+  # Sections auto-detected! No need to define them manually!
 cards:
   - type: markdown
     content: "Header Content"
@@ -75,9 +67,9 @@ cards:
       grid_area: main
 ```
 
-#### Option B: Auto-detection from grid-template-areas
+#### How It Works
 
-If you have `grid-template-areas` defined, sections will be auto-detected in edit mode:
+When you define `grid-template-areas`, sections automatically appear in edit mode showing each grid area as a labeled container:
 
 ```yaml
 type: custom:grid-layout-improved
@@ -88,6 +80,7 @@ layout:
     "header header"
     "sidebar content"
     "footer footer"
+  # That's it! Sections appear automatically in edit mode
 cards:
   - type: markdown
     content: "My Dashboard"
@@ -270,7 +263,7 @@ Here's a complete example combining both features:
 
 ```yaml
 title: My Advanced Dashboard
-type: custom:grid-layout
+type: custom:grid-layout-improved
 layout:
   grid-template-columns: 300px 1fr 300px
   grid-template-rows: 80px 1fr 60px
@@ -279,6 +272,7 @@ layout:
     "header header header"
     "left-sidebar main right-sidebar"
     "footer footer footer"
+  # Sections auto-detected! No manual config needed!
   custom_css: |
     #root {
       padding: 16px;
@@ -293,17 +287,6 @@ layout:
       background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
       font-size: 16px;
     }
-  sections:
-    header:
-      grid_area: header
-    left-sidebar:
-      grid_area: left-sidebar
-    main:
-      grid_area: main
-    right-sidebar:
-      grid_area: right-sidebar
-    footer:
-      grid_area: footer
 cards:
   - type: markdown
     content: "# Dashboard Header"
@@ -337,7 +320,7 @@ cards:
 
 ## Tips & Best Practices
 
-1. **Start Simple**: Begin with auto-detection, then add explicit sections if needed
+1. **Start Simple**: Just define `grid-template-areas` - sections auto-detect automatically!
 2. **Use Meaningful Names**: Name your sections descriptively (header, sidebar, etc.)
 3. **Test in Edit Mode**: Always check your layout in edit mode to see the structure
 4. **Combine with Media Queries**: Use the existing `mediaquery` feature for responsive layouts
