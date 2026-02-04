@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.1.0] - 2025-02-04
+
+### Documentation & Clarifications
+- **IMPORTANT**: Added clear documentation that Grid Layout Improved sections are a visual organizational tool, NOT a replacement for Native HA Sections
+- Created comprehensive comparison guide: `SECTIONS_VS_NATIVE.md`
+- Updated `GRID_SECTIONS_USAGE.md` with warnings and clarifications
+- Fixed misleading expectations about drag-and-drop functionality
+- Added migration guide for users wanting native sections with full drag-and-drop
+
+### What Grid Sections Actually Provide
+- Visual section boundaries in edit mode (organizational aid)
+- Section headers showing grid area names
+- Unassigned cards staging area
+- Custom CSS injection and complex grid layouts
+- **Manual card assignment via YAML** (no drag-and-drop between sections)
+
+### User Guidance
+- For full drag-and-drop: Use `type: sections` (Native HA Sections)
+- For complex CSS Grid layouts with visual aids: Use `type: custom:grid-layout-improved`
+- Added clear placeholder text explaining manual assignment requirement
+- Updated documentation to set proper expectations
+
+### Technical
+- Improved placeholder text in empty sections
+- Removed misleading drag-and-drop code references
+- Better inline documentation
+
 ## [3.0.0] - 2025-02-04
 
 ### Major Features
