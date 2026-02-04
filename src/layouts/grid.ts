@@ -12,7 +12,7 @@ class GridLayout extends BaseLayout {
   _mediaQueries: Array<MediaQueryList | null> = [];
   _layoutMQs: Array<MediaQueryList | null> = [];
   _config: GridViewConfig;
-  _unsubscribeTemplate?: () => void;
+  _lastBackgroundImage?: string;
 
   async setConfig(config: GridViewConfig) {
     await super.setConfig(config);
@@ -88,14 +88,6 @@ class GridLayout extends BaseLayout {
     this.shadowRoot.appendChild(styleEl);
   }
 
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    // Unsubscribe from template when element is removed
-    if (this._unsubscribeTemplate) {
-      this._unsubscribeTemplate();
-      this._unsubscribeTemplate = undefined;
-    }
-  }
 
   _setupTemplateSubscription() {
     const template = this._config.layout?.background_image;
@@ -107,8 +99,7 @@ class GridLayout extends BaseLayout {
       return;
     }
     
-    // For templates, use a simpler approach: evaluate on hass updates
-    console.log("Template detected, will evaluate from hass states");
+    // For templates, evaluate from hass states
     this._evaluateTemplate();
   }
 
@@ -117,7 +108,6 @@ class GridLayout extends BaseLayout {
     if (!template || !this.hass) return;
     
     try {
-      // Simple template evaluation using JavaScript
       // Parse {{ states('entity_id') }} pattern
       const statesMatch = template.match(/states\(['"]([^'"]+)['"]\)/);
       
@@ -125,14 +115,8 @@ class GridLayout extends BaseLayout {
         const entityId = statesMatch[1];
         const value = this.hass.states[entityId]?.state;
         
-        console.log(`Evaluated template: ${template}`);
-        console.log(`  Entity: ${entityId}`);
-        console.log(`  Value: ${value}`);
-        
         if (value && value !== "unknown" && value !== "unavailable") {
           this._updateBackgroundWithImage(value);
-        } else {
-          console.warn(`Entity ${entityId} has no valid value:`, value);
         }
         return;
       }
@@ -145,65 +129,55 @@ class GridLayout extends BaseLayout {
         const attr = attrMatch[2];
         const value = this.hass.states[entityId]?.attributes?.[attr];
         
-        console.log(`Evaluated template: ${template}`);
-        console.log(`  Entity: ${entityId}, Attribute: ${attr}`);
-        console.log(`  Value: ${value}`);
-        
         if (value) {
           this._updateBackgroundWithImage(value);
-        } else {
-          console.warn(`Entity ${entityId} attribute ${attr} not found`);
         }
         return;
       }
       
       // Fallback: use the template string as-is
-      console.warn("Template format not recognized, using as static:", template);
       this._updateBackgroundWithImage(template);
       
     } catch (e) {
-      console.error("Template evaluation failed:", e);
+      // Silent fail
       this._updateBackgroundWithImage(template);
     }
   }
 
   _updateBackgroundWithImage(bgImage: string) {
-    if (!bgImage || bgImage === "null" || bgImage === "undefined") {
-      console.error("❌ Invalid background image value:", bgImage);
-      return;
-    }
+    if (!bgImage || bgImage === "null" || bgImage === "undefined") return;
     
-    // Remove existing background
-    const existingBg = this.shadowRoot.querySelector(".background");
-    if (existingBg) {
-      existingBg.remove();
-    }
+    // Don't update if image hasn't changed
+    if (bgImage === this._lastBackgroundImage) return;
+    this._lastBackgroundImage = bgImage;
     
     const blur = this._config.layout?.background_blur || "0px";
     const opacity = this._config.layout?.background_opacity ?? 1;
     
-    console.log("Creating background with image:", bgImage, "blur:", blur, "opacity:", opacity);
+    // Update existing background element or create new one
+    let bgEl = this.shadowRoot.querySelector(".background") as HTMLElement;
     
-    const bgEl = document.createElement("div");
-    bgEl.className = "background";
-    bgEl.style.position = "fixed";
-    bgEl.style.top = "0";
-    bgEl.style.left = "0";
-    bgEl.style.right = "0";
-    bgEl.style.bottom = "0";
+    if (!bgEl) {
+      // Create new background element
+      bgEl = document.createElement("div");
+      bgEl.className = "background";
+      bgEl.style.position = "fixed";
+      bgEl.style.top = "0";
+      bgEl.style.left = "0";
+      bgEl.style.right = "0";
+      bgEl.style.bottom = "0";
+      bgEl.style.backgroundPosition = "center";
+      bgEl.style.backgroundRepeat = "no-repeat";
+      bgEl.style.backgroundSize = "cover";
+      bgEl.style.backgroundAttachment = "fixed";
+      bgEl.style.zIndex = "-1";
+      this.shadowRoot.insertBefore(bgEl, this.shadowRoot.firstChild);
+    }
+    
+    // Update styles
     bgEl.style.backgroundImage = `url('${bgImage}')`;
-    bgEl.style.backgroundPosition = "center";
-    bgEl.style.backgroundRepeat = "no-repeat";
-    bgEl.style.backgroundSize = "cover";
-    bgEl.style.backgroundAttachment = "fixed";
     bgEl.style.filter = `blur(${blur})`;
     bgEl.style.opacity = opacity.toString();
-    bgEl.style.zIndex = "-1";
-    
-    console.log("✅ Background element created with image:", bgEl.style.backgroundImage);
-    
-    // Insert at the beginning of shadowRoot
-    this.shadowRoot.insertBefore(bgEl, this.shadowRoot.firstChild);
   }
 
   _setGridStyles() {
