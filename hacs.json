@@ -1,5 +1,7 @@
 {
-  "name": "layout-card-improved",
+  "name": "Layout Card Improved",
+  "content_in_root": true,
+  "filename": "layout-card-improved.js",
   "render_readme": true,
-  "homeassistant": "2025.10.0.b0"
+  "homeassistant": "2021.10.0"
 }

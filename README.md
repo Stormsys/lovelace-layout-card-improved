@@ -14,6 +14,20 @@ See [DUAL_RUN_GUIDE.md](DUAL_RUN_GUIDE.md) for compatibility details and [GRID_S
 
 ## Installation
 
+### Via HACS (Recommended)
+
+**Quick Start**: See [QUICK_START.md](QUICK_START.md) for 5-minute setup guide.
+
+**Detailed Guide**: See [HACS_INSTALLATION.md](HACS_INSTALLATION.md) for complete installation instructions.
+
+**Summary**:
+1. Add custom repository: `https://github.com/Stormsys/lovelace-layout-card-improved`
+2. Install via HACS
+3. Add resource: `/hacsfiles/lovelace-layout-card-improved/layout-card-improved.js`
+4. Clear browser cache
+
+### Manual Installation
+
 The built file is `layout-card-improved.js` - add this to your Home Assistant resources.
 
 **Important**: All card types use the `-improved` suffix:
