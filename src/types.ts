@@ -22,6 +22,8 @@ export interface CardConfig {
           sidebar?: string;
         };
     column?: number;
+    grid_area?: string;
+    [key: string]: any; // Allow any grid-* properties
   };
 }
 
@@ -66,6 +68,13 @@ export interface GridViewConfig extends ViewConfig {
     padding?: string;
     height?: string;
     mediaquery?: Array<Record<string, any>>;
+    custom_css?: string;
+    sections?: {
+      [key: string]: {
+        cards?: Array<CardConfig>;
+        grid_area?: string;
+      };
+    };
   };
 }
 
