@@ -93,18 +93,24 @@ class GridLayout extends BaseLayout {
     
     // Create background element if background_image is set
     if (this._config.layout?.background_image) {
-      const bgImage = await this._renderTemplate(this._config.layout.background_image);
+      const bgImageRaw = await this._renderTemplate(this._config.layout.background_image);
+      // Trim whitespace and newlines from template result
+      const bgImage = bgImageRaw.trim();
       const blur = this._config.layout?.background_blur || "0px";
       const opacity = this._config.layout?.background_opacity ?? 1;
       
+      console.log("Background image (raw):", JSON.stringify(bgImageRaw));
+      console.log("Background image (trimmed):", JSON.stringify(bgImage));
+      
       const bgEl = document.createElement("div");
       bgEl.className = "background";
+      
+      // Set all styles individually
       bgEl.style.position = "fixed";
       bgEl.style.top = "0";
       bgEl.style.left = "0";
       bgEl.style.right = "0";
       bgEl.style.bottom = "0";
-      bgEl.style.backgroundImage = `url('${bgImage}')`;
       bgEl.style.backgroundPosition = "center";
       bgEl.style.backgroundRepeat = "no-repeat";
       bgEl.style.backgroundSize = "cover";
@@ -113,10 +119,24 @@ class GridLayout extends BaseLayout {
       bgEl.style.opacity = opacity.toString();
       bgEl.style.zIndex = "-1";
       
-      console.log("Background image element created:", bgImage, "blur:", blur, "opacity:", opacity);
+      // Set background-image separately and log it
+      const bgImageUrl = `url('${bgImage}')`;
+      bgEl.style.backgroundImage = bgImageUrl;
+      console.log("Setting background-image to:", bgImageUrl);
+      console.log("Element style.backgroundImage:", bgEl.style.backgroundImage);
       
       // Insert at the beginning of shadowRoot (before #root)
       this.shadowRoot.insertBefore(bgEl, this.shadowRoot.firstChild);
+      
+      // Verify it was added
+      setTimeout(() => {
+        const check = this.shadowRoot.querySelector(".background") as HTMLElement;
+        if (check) {
+          console.log("Background element in DOM:", check.style.backgroundImage);
+        } else {
+          console.error("Background element not found in DOM!");
+        }
+      }, 100);
     }
   }
 
@@ -124,22 +144,31 @@ class GridLayout extends BaseLayout {
     // Render Jinja templates using Home Assistant's template system
     if (!template) return "";
     
+    // Trim the template first
+    template = template.trim();
+    
     // Check if it's a Jinja template
     if (template.includes("{{") || template.includes("{%")) {
       try {
+        console.log("Rendering template:", template);
+        
         // Use Home Assistant's template rendering via WebSocket
         const result = await this.hass.callWS({
           type: "render_template",
           template: template,
         });
-        console.log("Template rendered:", template, "->", result);
-        return result;
+        
+        console.log("Template rendered successfully:", template, "->", result);
+        
+        // Return the result, trimmed
+        return typeof result === "string" ? result.trim() : String(result).trim();
       } catch (e) {
-        console.warn("Template rendering failed:", e, "Using raw template:", template);
+        console.error("Template rendering failed:", e, "Template was:", template);
         return template;
       }
     }
     
+    console.log("Not a template, using directly:", template);
     return template;
   }
 
