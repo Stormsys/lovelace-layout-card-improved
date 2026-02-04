@@ -53,12 +53,33 @@ cards:
     # Drag these into sections!
 ```
 
-## How It Would Work
+## How It Works
 
 1. **Each section** is a native `hui-section` with full HA functionality
 2. **Drag-and-drop** works within each section
 3. **Sections are positioned** in the CSS Grid at their assigned `grid_area`
 4. **No manual card assignment** needed - sections manage their own cards
+5. **Auto-created empty sections** - all grid areas get sections automatically!
+
+### Auto-Creation of Empty Sections
+
+If you define `grid-template-areas` but don't configure all sections, empty sections are **automatically created** in edit mode:
+
+```yaml
+layout:
+  grid-template-areas: |
+    "header header"
+    "sidebar main"
+    "footer footer"
+sections:
+  - type: grid
+    title: Main
+    grid_area: main
+    cards: [...]
+  # sidebar, header, footer sections auto-created!
+```
+
+All grid areas will be visible in edit mode, even if you haven't configured them yet. This makes it easy to see your layout structure and start dragging cards into position!
 
 ## Current Status
 
@@ -76,7 +97,19 @@ The code now:
 
 ## Example Layouts
 
-### Sidebar + Main
+### Sidebar + Main (Minimal Config)
+
+```yaml
+type: custom:grid-layout-improved
+layout:
+  grid-template-columns: 250px 1fr
+  grid-template-areas: |
+    "sidebar main"
+# That's it! Both sections auto-created in edit mode.
+# Add cards by dragging from loose cards at bottom!
+```
+
+### Or With Initial Content
 
 ```yaml
 type: custom:grid-layout-improved
@@ -91,12 +124,7 @@ sections:
     cards:
       - type: button
         entity: light.all_lights
-  
-  - type: grid
-    title: Dashboard
-    grid_area: main
-    cards:
-      - type: weather-forecast
+  # "main" section auto-created!
 ```
 
 ### Header + Three Columns

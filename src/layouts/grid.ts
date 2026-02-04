@@ -137,9 +137,18 @@ class GridLayout extends BaseLayout {
   async _placeNativeSections(root: Element) {
     const isEditMode = this.lovelace?.editMode;
     
+    // Auto-detect all grid areas and ensure sections exist for each
+    const allGridAreas = this._detectAllGridAreas();
+    const sectionsToRender = this._ensureSectionsForAllAreas(allGridAreas);
+    
     // Create native hui-section elements positioned in the grid
-    for (let i = 0; i < this._config.sections.length; i++) {
-      const sectionConfig = this._config.sections[i];
+    for (let i = 0; i < sectionsToRender.length; i++) {
+      const sectionConfig = sectionsToRender[i];
+      
+      // Skip empty sections in normal mode
+      if (!isEditMode && (!sectionConfig.cards || sectionConfig.cards.length === 0)) {
+        continue;
+      }
       
       // Wrap section in container for visual indicators
       const container = document.createElement("div");
@@ -171,6 +180,59 @@ class GridLayout extends BaseLayout {
       const looseCardsContainer = this._createLooseCardsContainer();
       root.appendChild(looseCardsContainer);
     }
+  }
+
+  _detectAllGridAreas(): string[] {
+    const gridTemplateAreas = this._config.layout?.["grid-template-areas"];
+    if (!gridTemplateAreas) return [];
+    
+    const areaNames = new Set<string>();
+    const lines = gridTemplateAreas.split('\n').map(line => line.trim()).filter(line => line);
+    
+    for (const line of lines) {
+      const areas = line.replace(/['"]/g, '').split(/\s+/);
+      areas.forEach(area => {
+        if (area !== '.' && area !== '') {
+          areaNames.add(area);
+        }
+      });
+    }
+    
+    return Array.from(areaNames);
+  }
+
+  _ensureSectionsForAllAreas(allGridAreas: string[]): any[] {
+    if (!allGridAreas.length) {
+      // No grid areas defined, just return configured sections
+      return this._config.sections || [];
+    }
+    
+    const sections = [...(this._config.sections || [])];
+    const existingAreas = new Set(
+      sections.map(s => s.grid_area).filter(Boolean)
+    );
+    
+    // Create empty sections for grid areas without sections
+    for (const area of allGridAreas) {
+      if (!existingAreas.has(area)) {
+        sections.push({
+          type: "grid",
+          title: this._formatAreaName(area),
+          grid_area: area,
+          cards: [],
+        });
+      }
+    }
+    
+    return sections;
+  }
+
+  _formatAreaName(area: string): string {
+    // Convert "sidebar" -> "Sidebar", "left-panel" -> "Left Panel"
+    return area
+      .split(/[-_]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   }
 
   _createLooseCardsContainer(): HTMLElement {
@@ -598,6 +660,19 @@ class GridLayout extends BaseLayout {
         .section-container.edit-mode:hover .section-grid-label {
           opacity: 1;
           background: var(--accent-color, #ff9800);
+        }
+        
+        /* Empty sections get a placeholder look */
+        .section-container.edit-mode:has(hui-section:empty),
+        .section-container.edit-mode:has(hui-section[cards=""]) {
+          border-style: dotted;
+          background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.02);
+        }
+        
+        .section-container.edit-mode:has(hui-section:empty):hover,
+        .section-container.edit-mode:has(hui-section[cards=""]):hover {
+          background: rgba(var(--rgb-accent-color, 255, 152, 0), 0.08);
+          border-color: var(--accent-color, #ff9800);
         }
         
         /* Loose cards container */
