@@ -101,20 +101,17 @@ class GridLayout extends BaseLayout {
     return false;
   }
 
-  _placeCards() {
+  async _placeCards() {
     const root = this.shadowRoot.querySelector("#root");
     while (root.firstChild) root.removeChild(root.firstChild);
     
-    // Auto-detect sections from grid-template-areas
-    const sections = this._autoDetectSections();
-    
-    // Use section-based layout in edit mode if sections detected
-    if (this.lovelace?.editMode && sections && Object.keys(sections).length > 0) {
-      this._placeSectionCards(root, sections);
+    // If using native sections, render them in grid positions
+    if (this._config.sections && this._config.sections.length > 0) {
+      await this._placeNativeSections(root);
       return;
     }
     
-    // Traditional card placement (normal mode or no sections)
+    // Traditional card placement
     let cards: CardConfigGroup[] = this.cards.map((card, index) => {
       const config = this._config.cards[index];
       return {
@@ -135,6 +132,41 @@ class GridLayout extends BaseLayout {
       }
       root.appendChild(el);
     }
+  }
+
+  async _placeNativeSections(root: Element) {
+    // Create native hui-section elements positioned in the grid
+    for (let i = 0; i < this._config.sections.length; i++) {
+      const sectionConfig = this._config.sections[i];
+      
+      // Create native section element
+      const sectionEl = await this._createNativeSection(sectionConfig, i);
+      
+      // Apply grid positioning
+      if (sectionConfig.grid_area) {
+        sectionEl.style.gridArea = sectionConfig.grid_area;
+      }
+      
+      root.appendChild(sectionEl);
+    }
+  }
+
+  async _createNativeSection(config: any, index: number) {
+    // Load section element creator if not loaded
+    if (!customElements.get("hui-section")) {
+      // Wait for it to be defined
+      await customElements.whenDefined("hui-section");
+    }
+    
+    // Create the native section element
+    const section: any = document.createElement("hui-section");
+    section.hass = this.hass;
+    section.lovelace = this.lovelace;
+    section.viewIndex = this.index;
+    section.index = index;
+    section.config = config;
+    
+    return section;
   }
 
   _autoDetectSections() {

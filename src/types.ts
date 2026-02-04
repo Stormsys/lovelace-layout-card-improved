@@ -62,7 +62,17 @@ export interface ColumnViewConfig extends ViewConfig {
   };
 }
 
+export interface SectionConfig {
+  type: string;
+  title?: string;
+  cards?: Array<CardConfig>;
+  column_span?: number;
+  grid_area?: string; // NEW: assign section to grid area
+  [key: string]: any;
+}
+
 export interface GridViewConfig extends ViewConfig {
+  sections?: Array<SectionConfig>; // Native sections!
   layout?: {
     margin?: string;
     padding?: string;
