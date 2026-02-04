@@ -169,6 +169,9 @@ class GridLayout extends BaseLayout {
     sections = sections || this._config.layout?.sections || {};
     const isEditMode = this.lovelace?.editMode;
     
+    // Track which cards have been assigned to sections
+    const assignedCardIndices = new Set<number>();
+    
     for (const [sectionName, sectionConfig] of Object.entries(sections)) {
       const sectionEl = document.createElement("div");
       sectionEl.className = isEditMode ? "grid-section edit-mode" : "grid-section";
@@ -181,18 +184,17 @@ class GridLayout extends BaseLayout {
       
       // Add section header in edit mode
       if (isEditMode) {
-        const headerEl = document.createElement("div");
-        headerEl.className = "section-header";
-        headerEl.textContent = sectionName;
+        const headerEl = this._createSectionHeader(sectionName);
         sectionEl.appendChild(headerEl);
       }
       
       // Add cards to this section
       const sectionCards = this._getSectionCards(sectionName);
-      for (const cardGroup of sectionCards) {
+      sectionCards.forEach(cardGroup => {
+        assignedCardIndices.add(cardGroup.index);
         const el = this.getCardElement(cardGroup);
         sectionEl.appendChild(el);
-      }
+      });
       
       // Show empty placeholder in edit mode
       if (isEditMode && sectionCards.length === 0) {
@@ -204,6 +206,91 @@ class GridLayout extends BaseLayout {
       
       root.appendChild(sectionEl);
     }
+    
+    // Add unassigned cards section in edit mode
+    if (isEditMode) {
+      const unassignedCards = this._getUnassignedCards(assignedCardIndices);
+      if (unassignedCards.length > 0) {
+        const unassignedSection = this._createUnassignedSection(unassignedCards);
+        root.appendChild(unassignedSection);
+      }
+    }
+  }
+
+  _createSectionHeader(sectionName: string): HTMLElement {
+    const headerEl = document.createElement("div");
+    headerEl.className = "section-header";
+    
+    const titleEl = document.createElement("span");
+    titleEl.className = "section-title";
+    titleEl.textContent = sectionName;
+    
+    const addBtn = document.createElement("button");
+    addBtn.className = "section-add-btn";
+    addBtn.innerHTML = "✕";
+    addBtn.title = "Add card to this section";
+    addBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._addCardToSection(sectionName);
+    });
+    
+    headerEl.appendChild(titleEl);
+    headerEl.appendChild(addBtn);
+    
+    return headerEl;
+  }
+
+  _addCardToSection(sectionName: string) {
+    // Dispatch event to trigger card picker with section context
+    this.dispatchEvent(new CustomEvent("ll-create-card", {
+      detail: { section: sectionName }
+    }));
+  }
+
+  _getUnassignedCards(assignedIndices: Set<number>): CardConfigGroup[] {
+    const cards: CardConfigGroup[] = [];
+    this.cards.forEach((card, index) => {
+      if (!assignedIndices.has(index)) {
+        const config = this._config.cards[index];
+        cards.push({
+          card,
+          config,
+          index,
+          show: this._shouldShow(card, config, index),
+        });
+      }
+    });
+    return cards.filter((c) => this.lovelace?.editMode || c.show);
+  }
+
+  _createUnassignedSection(unassignedCards: CardConfigGroup[]): HTMLElement {
+    const sectionEl = document.createElement("div");
+    sectionEl.className = "grid-section unassigned-section edit-mode";
+    sectionEl.setAttribute("data-section", "unassigned");
+    
+    // Header for unassigned section
+    const headerEl = document.createElement("div");
+    headerEl.className = "section-header unassigned-header";
+    
+    const titleEl = document.createElement("span");
+    titleEl.className = "section-title";
+    titleEl.textContent = "Unassigned Cards";
+    
+    const infoEl = document.createElement("span");
+    infoEl.className = "section-info";
+    infoEl.textContent = "(Drag into sections above)";
+    
+    headerEl.appendChild(titleEl);
+    headerEl.appendChild(infoEl);
+    sectionEl.appendChild(headerEl);
+    
+    // Add unassigned cards
+    for (const cardGroup of unassignedCards) {
+      const el = this.getCardElement(cardGroup);
+      sectionEl.appendChild(el);
+    }
+    
+    return sectionEl;
   }
 
   _getSectionCards(sectionName: string): CardConfigGroup[] {
@@ -230,7 +317,8 @@ class GridLayout extends BaseLayout {
   }
 
   render() {
-    return html` <div id="root"></div>
+    return html`
+      <div id="root"></div>
       ${this._render_fab()}`;
   }
   static get styles() {
@@ -240,16 +328,19 @@ class GridLayout extends BaseLayout {
         :host {
           height: 100%;
           box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
         }
         #root {
           display: grid;
           justify-content: stretch;
           margin: var(--layout-margin);
           padding: var(--layout-padding);
-          height: var(--layout-height);
+          flex: 1;
+          min-height: 0;
           overflow-y: var(--layout-overflow);
         }
-        #root > * {
+        #root > *:not(.unassigned-section) {
           margin: var(--masonry-view-card-margin, 4px 4px 8px);
         }
         .grid-section {
@@ -270,15 +361,63 @@ class GridLayout extends BaseLayout {
           background: var(--secondary-background-color, #f5f5f5);
         }
         .section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
           font-weight: 600;
           font-size: 14px;
-          color: var(--primary-text-color, #212121);
-          padding: 4px 8px;
-          background: var(--primary-color, #03a9f4);
           color: white;
+          padding: 8px 12px;
+          background: var(--primary-color, #03a9f4);
           border-radius: 4px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          gap: 8px;
+        }
+        .section-title {
+          flex: 1;
+        }
+        .section-add-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 18px;
+          font-weight: bold;
+          transition: all 0.2s ease;
+          transform: rotate(45deg);
+          padding: 0;
+          line-height: 1;
+        }
+        .section-add-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+          transform: rotate(45deg) scale(1.1);
+        }
+        .section-add-btn:active {
+          transform: rotate(45deg) scale(0.95);
+        }
+        .unassigned-section {
+          grid-column: 1 / -1;
+          margin-top: 16px;
+          border-color: var(--warning-color, #ff9800);
+          background: var(--secondary-background-color, #fafafa);
+        }
+        .unassigned-header {
+          background: var(--warning-color, #ff9800);
+          flex-wrap: wrap;
+        }
+        .section-info {
+          font-size: 11px;
+          opacity: 0.9;
+          text-transform: none;
+          font-weight: normal;
+          letter-spacing: normal;
         }
         .section-placeholder {
           display: flex;

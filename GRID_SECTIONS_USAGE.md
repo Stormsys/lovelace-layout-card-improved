@@ -91,23 +91,74 @@ cards:
 
 **In Edit Mode:**
 - Each section is displayed with a visible border
-- Section name appears in a header bar
+- Section name appears in a header bar with a **+ button** to add cards directly
 - Empty sections show a "Drop cards here" placeholder
 - Sections have a hover effect for better visibility
 - All grid spots are visible, making it easy to see your layout structure
+- **Unassigned Cards section** appears at the bottom showing cards not assigned to any section
+  - This section is highlighted in orange
+  - Cards can be dragged from here into sections above
+  - Only visible in edit mode
 
 **In Normal Mode:**
 - Sections render without extra styling
 - Clean presentation focused on content
 - No borders or headers visible
+- Unassigned cards section is hidden
 
 ### Visual Features
 
-- **Section Headers**: Blue header bars showing the section name
+- **Section Headers**: Blue header bars showing the section name with interactive + button
+- **Add Card Button**: Click the + button in any section header to add a card directly to that section
 - **Dashed Borders**: Clear boundaries for each section
 - **Hover Effects**: Sections highlight when you hover over them
 - **Empty Placeholders**: Visual indicators for sections without cards
 - **Flexible Layout**: Sections adapt to your grid configuration
+- **Unassigned Cards Area**: Orange-highlighted section at the bottom showing cards not yet assigned to sections
+  - Automatically appears when there are unassigned cards
+  - Only visible in edit mode
+  - Makes it easy to organize your dashboard by dragging cards into sections
+
+### Adding Cards to Sections
+
+There are multiple ways to add cards to sections:
+
+#### Method 1: Using the + Button (Easiest)
+1. Enter edit mode on your dashboard
+2. Click the **+** button in any section header
+3. Select the card type you want to add
+4. The card will be automatically assigned to that section
+
+#### Method 2: Drag from Unassigned Cards
+1. Add cards normally to your dashboard
+2. In edit mode, unassigned cards appear in the "Unassigned Cards" section at the bottom
+3. Drag cards from this section into the desired grid section (future enhancement)
+
+#### Method 3: Manual YAML Configuration
+Set the `grid_area` property in the card's `view_layout`:
+
+```yaml
+cards:
+  - type: entities
+    entities:
+      - light.living_room
+    view_layout:
+      grid_area: sidebar  # Assigns this card to the "sidebar" section
+```
+
+### Unassigned Cards Section
+
+The Unassigned Cards section is a special area that:
+- Appears automatically at the bottom in edit mode
+- Shows all cards that don't have a `grid_area` assignment
+- Has an orange header to distinguish it from regular sections
+- Provides a staging area for organizing your dashboard
+- Is completely hidden in normal (non-edit) mode
+
+This makes it easy to:
+1. Add cards to your dashboard first
+2. Then organize them into sections
+3. Without worrying about perfect placement initially
 
 ## Feature 2: Custom CSS Injection
 
