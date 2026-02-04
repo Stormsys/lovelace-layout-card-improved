@@ -159,7 +159,12 @@ class GridLayout extends BaseLayout {
       
       // Wrap section in container for visual indicators
       const container = document.createElement("div");
-      container.className = isEditMode ? "section-container edit-mode" : "section-container";
+      const baseClasses = ["section-container"];
+      if (isEditMode) baseClasses.push("edit-mode");
+      if (sectionConfig.grid_area) {
+        baseClasses.push(`section-${sectionConfig.grid_area}`);
+      }
+      container.className = baseClasses.join(" ");
       
       // Apply grid positioning to container
       if (sectionConfig.grid_area) {

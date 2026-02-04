@@ -327,16 +327,53 @@ custom_css: |
 ```
 
 ### Per-Section Theming
+
+Each section gets a class based on its grid area name: `section-{grid_area}`
+
 ```yaml
 custom_css: |
-  [data-grid-area="header"] {
+  /* Target specific sections by name */
+  .section-header {
     background: linear-gradient(to right, #ff6b6b, #ee5a6f);
   }
-  [data-grid-area="sidebar"] {
+  
+  .section-sidebar {
     background: linear-gradient(to bottom, #4facfe, #00f2fe);
   }
-  [data-grid-area="main"] {
+  
+  .section-main {
     background: linear-gradient(135deg, #667eea, #764ba2);
+  }
+  
+  .section-footer {
+    border: 3px solid var(--success-color);
+  }
+  
+  /* Or use the data attribute */
+  [data-grid-area="left-sidebar"] {
+    background: rgba(76, 175, 80, 0.1);
+  }
+```
+
+### Section-Specific Styling in Edit Mode
+```yaml
+custom_css: |
+  /* Style specific sections only in edit mode */
+  .section-header.edit-mode {
+    border-color: #ff6b6b;
+  }
+  
+  .section-sidebar.edit-mode {
+    border-color: #4facfe;
+  }
+  
+  .section-main.edit-mode {
+    border-color: #667eea;
+  }
+  
+  /* Or combine selectors */
+  #root.edit-mode .section-sidebar {
+    box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
   }
 ```
 
