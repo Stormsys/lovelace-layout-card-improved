@@ -3,5 +3,7 @@
   "content_in_root": true,
   "filename": "layout-card-improved.js",
   "render_readme": true,
-  "homeassistant": "2021.10.0"
+  "homeassistant": "2021.10.0",
+  "zip_release": false,
+  "persistent_directory": false
 }
