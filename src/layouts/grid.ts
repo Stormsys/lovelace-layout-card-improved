@@ -55,17 +55,47 @@ class GridLayout extends BaseLayout {
       }
     }
     
-    // Re-evaluate template when hass changes (for reactive backgrounds)
-    if (changedProperties.has("hass") && this._config.layout?.background_image) {
-      const template = this._config.layout.background_image;
-      if (template.includes("{{") || template.includes("{%")) {
-        this._evaluateTemplate();
+    // Propagate hass updates to native sections (CRITICAL for card updates!)
+    if (changedProperties.has("hass")) {
+      this._updateSectionsHass();
+      
+      // Re-evaluate template for reactive backgrounds
+      if (this._config.layout?.background_image) {
+        const template = this._config.layout.background_image;
+        if (template.includes("{{") || template.includes("{%")) {
+          this._evaluateTemplate();
+        }
       }
+    }
+    
+    // Propagate lovelace updates to native sections
+    if (changedProperties.has("lovelace")) {
+      this._updateSectionsLovelace();
     }
     
     if (changedProperties.has("cards") || changedProperties.has("_editMode")) {
       this._placeCards();
     }
+  }
+
+  _updateSectionsHass() {
+    // Update hass on all native section elements
+    const sections = this.shadowRoot.querySelectorAll("hui-section");
+    sections.forEach((section: any) => {
+      if (section) {
+        section.hass = this.hass;
+      }
+    });
+  }
+
+  _updateSectionsLovelace() {
+    // Update lovelace on all native section elements  
+    const sections = this.shadowRoot.querySelectorAll("hui-section");
+    sections.forEach((section: any) => {
+      if (section) {
+        section.lovelace = this.lovelace;
+      }
+    });
   }
 
   async firstUpdated() {
