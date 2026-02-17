@@ -146,6 +146,22 @@ class GridLayout extends BaseLayout {
     if (!css.includes("{{") && !css.includes("{%")) return css;
     
     try {
+      // Handle {% if is_state('entity', 'value') %} ... {% endif %} blocks
+      css = css.replace(/\{%\s*if\s+is_state\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g,
+        (match, entityId, expectedState, content) => {
+          const actualState = this.hass.states[entityId]?.state;
+          return actualState === expectedState ? content : '';
+        }
+      );
+      
+      // Handle {% if not is_state('entity', 'value') %} ... {% endif %} blocks
+      css = css.replace(/\{%\s*if\s+not\s+is_state\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g,
+        (match, entityId, expectedState, content) => {
+          const actualState = this.hass.states[entityId]?.state;
+          return actualState !== expectedState ? content : '';
+        }
+      );
+      
       // Replace {{ states('entity_id') }} patterns
       css = css.replace(/\{\{\s*states\(['"]([^'"]+)['"]\)\s*\}\}/g, (match, entityId) => {
         const value = this.hass.states[entityId]?.state;
