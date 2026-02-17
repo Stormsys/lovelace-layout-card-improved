@@ -211,7 +211,6 @@ class GridLayout extends BaseLayout {
         (match, entityId, expectedState, content) => {
           const actualState = this.hass.states[entityId]?.state;
           const matches = actualState === expectedState;
-          // Only log if entity exists
           if (actualState !== undefined) {
             this._trackedEntities.add(entityId);
           }
