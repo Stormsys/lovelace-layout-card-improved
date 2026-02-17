@@ -146,38 +146,51 @@ class GridLayout extends BaseLayout {
     if (!css.includes("{{") && !css.includes("{%")) return css;
     
     try {
+      let modified = css;
+      
       // Handle {% if is_state('entity', 'value') %} ... {% endif %} blocks
-      css = css.replace(/\{%\s*if\s+is_state\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g,
+      modified = modified.replace(/\{%\s*if\s+is_state\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g,
         (match, entityId, expectedState, content) => {
           const actualState = this.hass.states[entityId]?.state;
-          return actualState === expectedState ? content : '';
+          const matches = actualState === expectedState;
+          console.log(`CSS Template: is_state('${entityId}', '${expectedState}') = ${matches} (actual: ${actualState})`);
+          return matches ? content : '';
         }
       );
       
       // Handle {% if not is_state('entity', 'value') %} ... {% endif %} blocks
-      css = css.replace(/\{%\s*if\s+not\s+is_state\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g,
+      modified = modified.replace(/\{%\s*if\s+not\s+is_state\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g,
         (match, entityId, expectedState, content) => {
           const actualState = this.hass.states[entityId]?.state;
-          return actualState !== expectedState ? content : '';
+          const matches = actualState !== expectedState;
+          console.log(`CSS Template: not is_state('${entityId}', '${expectedState}') = ${matches} (actual: ${actualState})`);
+          return matches ? content : '';
         }
       );
       
       // Replace {{ states('entity_id') }} patterns
-      css = css.replace(/\{\{\s*states\(['"]([^'"]+)['"]\)\s*\}\}/g, (match, entityId) => {
+      modified = modified.replace(/\{\{\s*states\(['"]([^'"]+)['"]\)\s*\}\}/g, (match, entityId) => {
         const value = this.hass.states[entityId]?.state;
+        console.log(`CSS Template: states('${entityId}') = ${value}`);
         return value || match;
       });
       
       // Replace {{ state_attr('entity_id', 'attr') }} patterns
-      css = css.replace(/\{\{\s*state_attr\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*\}\}/g, 
+      modified = modified.replace(/\{\{\s*state_attr\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*\}\}/g, 
         (match, entityId, attr) => {
           const value = this.hass.states[entityId]?.attributes?.[attr];
+          console.log(`CSS Template: state_attr('${entityId}', '${attr}') = ${value}`);
           return value !== undefined ? value : match;
         }
       );
       
-      return css;
+      if (modified !== css) {
+        console.log("CSS templates evaluated, changes made");
+      }
+      
+      return modified;
     } catch (e) {
+      console.error("CSS template evaluation error:", e);
       return css;
     }
   }
