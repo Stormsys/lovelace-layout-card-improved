@@ -15,6 +15,8 @@ class GridLayout extends BaseLayout {
   _lastBackgroundImage?: string;
   _lastEvaluatedCss?: string;
   _trackedEntities: Set<string> = new Set();
+  _sectionsCache: Map<number, any> = new Map();
+  _updateQueued: boolean = false;
 
   async setConfig(config: GridViewConfig) {
     await super.setConfig(config);
@@ -59,7 +61,10 @@ class GridLayout extends BaseLayout {
     
     // Propagate hass updates to native sections (CRITICAL for card updates!)
     if (changedProperties.has("hass")) {
-      this._updateSectionsHass();
+      // Skip expensive operations during active editing
+      if (!this.lovelace?.editMode) {
+        this._queueSectionHassUpdate();
+      }
       
       // Only re-evaluate templates if tracked entities changed
       if (this._hasTrackedEntitiesChanged(changedProperties)) {
@@ -85,9 +90,26 @@ class GridLayout extends BaseLayout {
       this._updateSectionsLovelace();
     }
     
-    if (changedProperties.has("cards") || changedProperties.has("_editMode")) {
+    // Don't re-render cards during edit mode unless explicitly needed
+    if (changedProperties.has("cards")) {
       this._placeCards();
+    } else if (changedProperties.has("_editMode")) {
+      // Only re-render when toggling edit mode
+      this._placeCards();
+      // Clear section cache when entering/exiting edit mode
+      this._sectionsCache.clear();
     }
+  }
+
+  _queueSectionHassUpdate() {
+    // Debounce hass updates using requestAnimationFrame
+    if (this._updateQueued) return;
+    
+    this._updateQueued = true;
+    requestAnimationFrame(() => {
+      this._updateSectionsHass();
+      this._updateQueued = false;
+    });
   }
 
   _updateSectionsHass() {
