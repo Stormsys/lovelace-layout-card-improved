@@ -649,7 +649,85 @@ class GridLayout extends BaseLayout {
     section.index = index;
     section.config = config;
     
+    // Check if this is an auto-created section
+    const isAutoCreated = !this._config.sections?.find(s => s.grid_area === config.grid_area);
+    
+    // If auto-created, listen for first card addition and auto-save section
+    if (isAutoCreated && config.grid_area) {
+      this._setupAutoSectionCreation(section, config);
+    }
+    
     return section;
+  }
+
+  _setupAutoSectionCreation(section: any, sectionConfig: any) {
+    // Listen for card additions to this section
+    const checkForCards = () => {
+      setTimeout(() => {
+        const gridSection = section.querySelector('hui-grid-section');
+        if (gridSection) {
+          const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+              if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                // A card was added! Auto-create this section in config
+                this._autoAddSectionToConfig(sectionConfig);
+                observer.disconnect();
+                return;
+              }
+            }
+          });
+          
+          observer.observe(gridSection, { childList: true, subtree: true });
+        } else {
+          checkForCards(); // Try again
+        }
+      }, 100);
+    };
+    
+    checkForCards();
+  }
+
+  _autoAddSectionToConfig(sectionConfig: any) {
+    if (!this.lovelace) return;
+    
+    try {
+      // Get current view config
+      const viewConfig = this.lovelace.config.views[this.index];
+      
+      // Add section to config if it doesn't exist
+      const sections = [...(viewConfig.sections || [])];
+      const exists = sections.find(s => s.grid_area === sectionConfig.grid_area);
+      
+      if (!exists) {
+        // Add the new section
+        sections.push({
+          type: sectionConfig.type || 'grid',
+          title: sectionConfig.title,
+          grid_area: sectionConfig.grid_area,
+          cards: []
+        });
+        
+        // Update view config
+        const newViewConfig = {
+          ...viewConfig,
+          sections: sections
+        };
+        
+        // Save to lovelace config
+        const newConfig = {
+          ...this.lovelace.config,
+          views: [
+            ...this.lovelace.config.views.slice(0, this.index),
+            newViewConfig,
+            ...this.lovelace.config.views.slice(this.index + 1)
+          ]
+        };
+        
+        this.lovelace.saveConfig(newConfig);
+      }
+    } catch (e) {
+      // Silent fail - section will remain auto-created
+    }
   }
 
   _autoDetectSections() {
