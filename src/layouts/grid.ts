@@ -17,6 +17,7 @@ class GridLayout extends BaseLayout {
   _trackedEntities: Set<string> = new Set();
   _sectionsCache: Map<number, any> = new Map();
   _updateQueued: boolean = false;
+  _autoSectionObservers: MutationObserver[] = [];
 
   async setConfig(config: GridViewConfig) {
     await super.setConfig(config);
@@ -649,11 +650,10 @@ class GridLayout extends BaseLayout {
     section.index = index;
     section.config = config;
     
-    // Check if this is an auto-created section
+    // Check if this is an auto-created section (only wire up auto-save in edit mode)
     const isAutoCreated = !this._config.sections?.find(s => s.grid_area === config.grid_area);
-    
-    // If auto-created, listen for first card addition and auto-save section
-    if (isAutoCreated && config.grid_area) {
+
+    if (isAutoCreated && config.grid_area && this.lovelace?.editMode) {
       this._setupAutoSectionCreation(section, config);
     }
     
@@ -661,39 +661,51 @@ class GridLayout extends BaseLayout {
   }
 
   _setupAutoSectionCreation(section: any, sectionConfig: any) {
-    // Listen for card additions to this section
+    // hui-section renders its content in shadow DOM — we must observe shadowRoot.
+    // Poll up to 50 times (5 s) for the shadow root to be ready, then give up.
+    let attempts = 0;
+    const MAX_ATTEMPTS = 50;
+
     const checkForCards = () => {
+      if (attempts++ >= MAX_ATTEMPTS) return; // never retry indefinitely
+
       setTimeout(() => {
-        const gridSection = section.querySelector('hui-grid-section');
+        // Prefer shadow-root lookup; fall back to direct querySelector for
+        // custom implementations that don't use shadow DOM.
+        const root: ShadowRoot | Element = section.shadowRoot ?? section;
+        const gridSection: Element | null =
+          root.querySelector('hui-grid-section') ??
+          section.querySelector('hui-grid-section');
+
         if (gridSection) {
           const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
               if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                // Check if actual card elements were added (not just wrappers)
                 const hasCardContent = Array.from(mutation.addedNodes).some(
-                  (node: any) => node.tagName === 'HUI-CARD' || 
-                                 node.querySelector?.('hui-card') ||
-                                 node.classList?.contains('card')
+                  (node: any) =>
+                    node.tagName === 'HUI-CARD' ||
+                    node.querySelector?.('hui-card') ||
+                    node.classList?.contains('card')
                 );
-                
+
                 if (hasCardContent) {
-                  // A card was added! Auto-create this section in config
-                  console.log(`Auto-saving section '${sectionConfig.grid_area}' to YAML`);
                   this._autoAddSectionToConfig(sectionConfig);
                   observer.disconnect();
+                  this._autoSectionObservers = this._autoSectionObservers.filter(o => o !== observer);
                   return;
                 }
               }
             }
           });
-          
+
+          this._autoSectionObservers.push(observer);
           observer.observe(gridSection, { childList: true, subtree: true });
         } else {
-          checkForCards(); // Try again
+          checkForCards();
         }
       }, 100);
     };
-    
+
     checkForCards();
   }
 
@@ -946,6 +958,15 @@ class GridLayout extends BaseLayout {
       <div id="root"></div>
       ${this._render_fab()}`;
   }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    for (const observer of this._autoSectionObservers) {
+      observer.disconnect();
+    }
+    this._autoSectionObservers = [];
+  }
+
   static get styles() {
     return [
       this._fab_styles,
