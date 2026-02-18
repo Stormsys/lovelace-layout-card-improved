@@ -1,5 +1,42 @@
 # Changelog
 
+## [3.1.3] - 2025-02-04
+
+### Performance Fixes - Edit Mode Stabilization
+- **FIXED**: Janky edit mode, sluggish YAML editing, refreshing during search
+- Debounced section hass updates with requestAnimationFrame
+- Skip hass propagation to sections during edit mode (only needed in view mode)
+- Cache native section elements and reuse instead of recreating
+- Smarter re-render detection (only on actual changes, not during editing)
+- Removed all console logging spam
+- Smart entity tracking - only evaluate templates when tracked entities change
+
+### Template System Improvements
+- Support for `{% if is_state() %}` blocks in custom_css
+- Support for `{% if not is_state() %}` blocks
+- Templates in custom_css now fully reactive
+- Entity tracking for efficient updates
+- CSS template caching
+
+### Background Image Enhancements
+- Automatic header height detection
+- Background positioned below HA header
+- Simple direct state evaluation (no WebSocket complexity)
+- Support for {{ states() }} and {{ state_attr() }}
+- Cached background updates - only when image changes
+
+## [3.1.2] - 2025-02-04
+
+### Critical Fix
+- Fixed cards not updating when states change
+- Proper hass propagation to native sections
+
+## [3.1.1] - 2025-02-04
+
+### Fixes
+- Removed problematic WebSocket subscription code
+- Simplified template rendering
+
 ## [3.1.0] - 2025-02-04
 
 ### Documentation & Clarifications
