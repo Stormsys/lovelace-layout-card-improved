@@ -561,14 +561,38 @@ class GridLayout extends LitElement {
     }
   }
 
+  // ── FAB (Add card) ──────────────────────────────────────────────────────
+
+  _addCard() {
+    this.dispatchEvent(new CustomEvent("ll-create-card"));
+  }
+
+  _render_fab() {
+    // In sections mode hui-section provides its own per-section "Add card"
+    // buttons, so the view-level FAB would only add orphan cards.
+    if (this._config?.sections?.length) return html``;
+    if (!this.lovelace?.editMode) return html``;
+    return html`
+      <ha-fab .label=${"Add card"} extended @click=${this._addCard}>
+        <ha-icon slot="icon" .icon=${"mdi:plus"}></ha-icon>
+      </ha-fab>
+    `;
+  }
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   render() {
-    return html`<div id="root"></div>`;
+    return html`<div id="root"></div>${this._render_fab()}`;
   }
 
   static get styles() {
     return css`
+      ha-fab {
+        position: fixed;
+        right: calc(16px + env(safe-area-inset-right));
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        z-index: 1;
+      }
       :host {
         height: 100%;
         box-sizing: border-box;
