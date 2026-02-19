@@ -248,28 +248,6 @@ class GridLayout extends LitElement {
         }
         .section-container::-webkit-scrollbar {
           display: none;
-        }
-        @media (max-width: 768px) {
-          #root {
-            position: relative !important;
-            top: 0;
-            bottom: auto;
-            left: auto;
-            right: auto;
-            height: auto;
-            min-height: 100vh;
-            overflow: visible;
-            padding: 12px !important;
-            gap: 8px;
-            grid-template-rows: auto;
-            grid-auto-rows: max-content;
-          }
-          #root.edit-mode {
-            top: 0;
-          }
-          .section-container {
-            height: auto;
-          }
         }`;
     }
 
@@ -287,7 +265,7 @@ class GridLayout extends LitElement {
           rules.push(`
           #root {
             position: relative !important;
-            top: auto;
+            top: 0;
             bottom: auto;
             left: auto;
             right: auto;
@@ -295,10 +273,16 @@ class GridLayout extends LitElement {
             min-height: 100vh;
             overflow: visible;
             margin: var(--layout-margin) !important;
-            padding: var(--layout-padding) !important;
+            padding: var(--layout-padding, 12px) !important;
+            gap: 8px;
+            grid-template-rows: auto;
+            grid-auto-rows: max-content;
           }
           #root.edit-mode {
-            top: auto;
+            top: 0;
+          }
+          .section-container {
+            height: auto;
           }`);
         }
         if ((overrides as any).zoom != null) {
