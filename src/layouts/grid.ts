@@ -241,6 +241,14 @@ class GridLayout extends LitElement {
         #root.edit-mode {
           top: calc(var(--header-height, 56px) + var(--tab-bar-height, 56px) - 2px + var(--safe-area-inset-top, 0px));
         }
+        .section-container {
+          overflow-y: scroll;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+        .section-container::-webkit-scrollbar {
+          display: none;
+        }
         @media (max-width: 768px) {
           #root {
             position: relative !important;
@@ -934,8 +942,9 @@ class GridLayout extends LitElement {
       }
       .section-grid-label {
         position: absolute;
-        top: 4px;
-        right: 4px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         background: var(--primary-color, #03a9f4);
         color: white;
         padding: 4px 8px;
