@@ -1,9 +1,15 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g. v0.2.0-alpha)"
+        required: true
+      prerelease:
+        description: "Mark as pre-release"
+        type: boolean
+        default: true
 
 jobs:
   release:
@@ -24,8 +30,17 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.version }}
           files: sections-grid-layout.js
           generate_release_notes: true
+          prerelease: ${{ github.event.inputs.prerelease }}
