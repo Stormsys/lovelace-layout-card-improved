@@ -1,5 +1,7 @@
 # Sections Grid Layout
 
+> **Alpha** — this is pre-release software. APIs, element names, and YAML keys may change before v1.0. Test on a non-production HA instance.
+
 A Home Assistant Lovelace **view** plugin that places native HA sections into a CSS Grid.
 
 Requires **Home Assistant 2024.2+** (when native Sections views were introduced).

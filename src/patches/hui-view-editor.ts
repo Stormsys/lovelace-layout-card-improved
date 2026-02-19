@@ -11,10 +11,12 @@ customElements.whenDefined("hui-view-editor").then(() => {
   HuiViewEditor.prototype.firstUpdated = function () {
     firstUpdated?.bind(this)();
 
-    if (!this._oldSchema) {
-      this._oldSchema = this._schema;
+    // Use a distinct property name so we don't collide with layout-card's
+    // _oldSchema reference when both plugins are loaded simultaneously.
+    if (!this._sglOldSchema) {
+      this._sglOldSchema = this._schema;
       this._schema = (...arg) => {
-        const retval = this._oldSchema(...arg);
+        const retval = this._sglOldSchema(...arg);
         const typeSelector = retval.find((e) => e.name === "type");
 
         if (!typeSelector || !typeSelector.selector?.select?.options) {

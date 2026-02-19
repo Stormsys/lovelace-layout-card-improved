@@ -1,6 +1,6 @@
 {
   "name": "sections-grid-layout",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha",
   "description": "Home Assistant Lovelace view layout: native sections arranged in a CSS Grid with Jinja template support",
   "private": true,
   "scripts": {
