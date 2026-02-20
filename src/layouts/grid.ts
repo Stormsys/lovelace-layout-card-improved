@@ -890,39 +890,76 @@ class GridLayout extends LitElement {
   }
 
   _sectionConfigToYaml(config: any): string {
-    const SKIP = new Set(["type", "cards", "grid_area"]);
-    const lines: string[] = [];
-    for (const [key, value] of Object.entries(config)) {
-      if (SKIP.has(key)) continue;
-      if (value === undefined || value === null) continue;
-      if (typeof value === "object") continue;
-      lines.push(`${key}: ${typeof value === "string" && value.includes(":") ? `"${value}"` : value}`);
-    }
-    return lines.join("\n");
+    const SKIP = new Set(["cards"]);
+    const serialize = (obj: any, indent: number): string => {
+      const pad = "  ".repeat(indent);
+      const lines: string[] = [];
+      for (const [key, value] of Object.entries(obj)) {
+        if (indent === 0 && SKIP.has(key)) continue;
+        if (value === undefined || value === null) continue;
+        if (Array.isArray(value)) {
+          lines.push(`${pad}${key}:`);
+          for (const item of value) {
+            if (typeof item === "object" && item !== null) {
+              const inner = serialize(item, indent + 2).replace(/^\s+/, "");
+              lines.push(`${pad}  - ${inner}`);
+            } else {
+              lines.push(`${pad}  - ${this._yamlScalar(item)}`);
+            }
+          }
+        } else if (typeof value === "object") {
+          lines.push(`${pad}${key}:`);
+          lines.push(serialize(value, indent + 1));
+        } else {
+          lines.push(`${pad}${key}: ${this._yamlScalar(value)}`);
+        }
+      }
+      return lines.join("\n");
+    };
+    return serialize(config, 0);
   }
 
-  _yamlToSectionConfig(yaml: string): Record<string, any> {
-    const result: Record<string, any> = {};
-    for (const line of yaml.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const colonIdx = trimmed.indexOf(":");
-      if (colonIdx < 0) continue;
-      const key = trimmed.slice(0, colonIdx).trim();
-      let val: any = trimmed.slice(colonIdx + 1).trim();
-      // Strip surrounding quotes
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-        val = val.slice(1, -1);
-      } else if (val === "true") {
-        val = true;
-      } else if (val === "false") {
-        val = false;
-      } else if (val !== "" && !isNaN(Number(val))) {
-        val = Number(val);
+  _yamlScalar(value: any): string {
+    if (typeof value === "string") {
+      if (value === "" || value === "true" || value === "false" ||
+          value === "null" || value === "~" ||
+          /^[\d.]+$/.test(value) || value.includes(":") ||
+          value.includes("#") || value.includes("{") ||
+          value.includes("[") || value.startsWith("'") ||
+          value.startsWith('"') || value.startsWith("&") ||
+          value.startsWith("*") || value.includes("\n")) {
+        return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
       }
-      result[key] = val;
+      return value;
     }
-    return result;
+    return String(value);
+  }
+
+  _parseYaml(yaml: string): Record<string, any> | null {
+    // Try HA's bundled js-yaml first
+    try {
+      const jsyaml = (window as any).jsyaml;
+      if (jsyaml?.load) return jsyaml.load(yaml) || {};
+    } catch { /* fall through */ }
+    // Fallback: simple line-based parser (flat keys only)
+    try {
+      const result: Record<string, any> = {};
+      for (const line of yaml.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const colonIdx = trimmed.indexOf(":");
+        if (colonIdx < 0) continue;
+        const key = trimmed.slice(0, colonIdx).trim();
+        let val: any = trimmed.slice(colonIdx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        } else if (val === "true") { val = true; }
+        else if (val === "false") { val = false; }
+        else if (val !== "" && !isNaN(Number(val))) { val = Number(val); }
+        if (val !== "") result[key] = val;
+      }
+      return result;
+    } catch { return null; }
   }
 
   _openSectionYamlEditor(gridArea: string) {
@@ -934,6 +971,8 @@ class GridLayout extends LitElement {
     const sectionConfig = liveSections.find((s: any) => s.grid_area === gridArea) || {};
     const yaml = this._sectionConfigToYaml(sectionConfig);
 
+    let currentValue = yaml;
+
     const backdrop = document.createElement("div");
     backdrop.className = "sgl-yaml-editor";
 
@@ -942,12 +981,33 @@ class GridLayout extends LitElement {
 
     const header = document.createElement("div");
     header.className = "sgl-yaml-header";
-    header.textContent = gridArea;
+    header.textContent = `Edit Section: ${gridArea}`;
 
-    const textarea = document.createElement("textarea");
-    textarea.className = "sgl-yaml-textarea";
-    textarea.value = yaml;
-    textarea.spellcheck = false;
+    // Use HA's code editor if available, otherwise fall back to textarea
+    const editorContainer = document.createElement("div");
+    editorContainer.className = "sgl-yaml-editor-container";
+
+    const useHaEditor = !!customElements.get("ha-code-editor");
+    if (useHaEditor) {
+      const codeEditor = document.createElement("ha-code-editor") as any;
+      codeEditor.mode = "yaml";
+      codeEditor.autofocus = true;
+      codeEditor.autocompleteEntities = true;
+      codeEditor.value = yaml;
+      if (this.hass) codeEditor.hass = this.hass;
+      codeEditor.addEventListener("value-changed", (e: CustomEvent) => {
+        currentValue = e.detail.value ?? "";
+      });
+      editorContainer.appendChild(codeEditor);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.className = "sgl-yaml-textarea";
+      textarea.value = yaml;
+      textarea.spellcheck = false;
+      textarea.addEventListener("input", () => { currentValue = textarea.value; });
+      editorContainer.appendChild(textarea);
+      requestAnimationFrame(() => textarea.focus());
+    }
 
     const actions = document.createElement("div");
     actions.className = "sgl-yaml-actions";
@@ -961,25 +1021,25 @@ class GridLayout extends LitElement {
     saveBtn.className = "sgl-yaml-btn sgl-yaml-btn-save";
     saveBtn.textContent = "Save";
     saveBtn.addEventListener("click", () => {
-      const parsed = this._yamlToSectionConfig(textarea.value);
-      const merged = {
-        ...sectionConfig,
+      const parsed = this._parseYaml(currentValue);
+      if (!parsed) {
+        alert("Invalid YAML");
+        return;
+      }
+      // Preserve cards from original config; parsed YAML replaces everything else
+      const merged: Record<string, any> = {
         ...parsed,
-        type: sectionConfig.type || "grid",
-        grid_area: gridArea,
         cards: sectionConfig.cards || [],
       };
-      // Remove keys that were deleted from the YAML
-      for (const key of Object.keys(sectionConfig)) {
-        if (key === "type" || key === "cards" || key === "grid_area") continue;
-        if (!(key in parsed)) delete merged[key];
-      }
+      // Ensure grid_area is preserved
+      if (!merged.grid_area) merged.grid_area = gridArea;
+      if (!merged.type) merged.type = sectionConfig.type || "grid";
       this._handleSectionConfigChanged(gridArea, merged);
       backdrop.remove();
     });
 
     actions.append(cancelBtn, saveBtn);
-    dialog.append(header, textarea, actions);
+    dialog.append(header, editorContainer, actions);
     backdrop.appendChild(dialog);
 
     backdrop.addEventListener("click", (e) => {
@@ -987,7 +1047,6 @@ class GridLayout extends LitElement {
     });
 
     this.shadowRoot.appendChild(backdrop);
-    textarea.focus();
   }
 
   // ── FAB (Add card) ──────────────────────────────────────────────────────
@@ -1172,51 +1231,65 @@ class GridLayout extends LitElement {
         background: var(--card-background-color, #1c1c1c);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
-        padding: 16px;
-        min-width: 340px;
-        max-width: 480px;
+        padding: 20px;
+        min-width: 400px;
+        max-width: 640px;
         width: 90vw;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         font-family: var(--paper-font-body1_-_font-family, sans-serif);
       }
       .sgl-yaml-header {
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: var(--primary-color, #03a9f4);
+        color: var(--primary-text-color, #fff);
         margin-bottom: 12px;
+        flex-shrink: 0;
+      }
+      .sgl-yaml-editor-container {
+        flex: 1;
+        min-height: 300px;
+        max-height: 60vh;
+        overflow: auto;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+      }
+      .sgl-yaml-editor-container ha-code-editor {
+        display: block;
+        --code-mirror-height: 100%;
       }
       .sgl-yaml-textarea {
         width: 100%;
-        min-height: 200px;
+        height: 100%;
+        min-height: 300px;
         background: rgba(0, 0, 0, 0.2);
         color: var(--primary-text-color, #fff);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
+        border: none;
         padding: 12px;
         font-family: "Roboto Mono", "SFMono-Regular", monospace;
         font-size: 13px;
         line-height: 1.5;
-        resize: vertical;
+        resize: none;
         box-sizing: border-box;
         tab-size: 2;
       }
       .sgl-yaml-textarea:focus {
         outline: none;
-        border-color: var(--primary-color, #03a9f4);
       }
       .sgl-yaml-actions {
         display: flex;
         justify-content: flex-end;
         gap: 8px;
         margin-top: 12px;
+        flex-shrink: 0;
       }
       .sgl-yaml-btn {
         border: none;
         border-radius: 6px;
-        padding: 6px 16px;
-        font-size: 12px;
+        padding: 8px 20px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         transition: opacity 0.15s;
