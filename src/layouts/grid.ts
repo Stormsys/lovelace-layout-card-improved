@@ -32,6 +32,7 @@ class GridLayout extends LitElement {
   _overlayStates: Map<number, boolean> = new Map();
   _rendered: boolean = false;
   _dialogObserver: MutationObserver | null = null;
+  _bgElementId: string = `sgl-bg-${Math.random().toString(36).slice(2, 8)}`;
 
   // Stable bound handlers so addEventListener/removeEventListener match
   _onCardMQChange = () => this._placeCards();
@@ -155,6 +156,7 @@ class GridLayout extends LitElement {
     this._overlayStates.clear();
     this._dialogObserver?.disconnect();
     this._dialogObserver = null;
+    this._removeBackground();
   }
 
   _setupDialogObserver() {
@@ -705,21 +707,29 @@ class GridLayout extends LitElement {
     const opacity = this._config.layout?.background_opacity ?? 1;
     const headerHeight = this._getHeaderHeight();
 
-    let bgEl = this.shadowRoot.querySelector(".background") as HTMLElement;
+    // Attach to document.body so position:fixed is relative to the viewport,
+    // not broken by ancestor transforms/filters inside HA's layout containers.
+    let bgEl = document.getElementById(this._bgElementId);
     if (!bgEl) {
       bgEl = document.createElement("div");
-      bgEl.className = "background";
+      bgEl.id = this._bgElementId;
       Object.assign(bgEl.style, {
         position: "fixed", left: "0", right: "0", bottom: "0",
         backgroundPosition: "center", backgroundRepeat: "no-repeat",
-        backgroundSize: "cover", backgroundAttachment: "fixed", zIndex: "-1",
+        backgroundSize: "cover", zIndex: "-1",
+        pointerEvents: "none",
       });
-      this.shadowRoot.insertBefore(bgEl, this.shadowRoot.firstChild);
+      document.body.appendChild(bgEl);
     }
     bgEl.style.top = `${headerHeight}px`;
     bgEl.style.backgroundImage = `url('${bgImage}')`;
     bgEl.style.filter = `blur(${blur})`;
     bgEl.style.opacity = opacity.toString();
+  }
+
+  _removeBackground() {
+    document.getElementById(this._bgElementId)?.remove();
+    this._lastBackgroundImage = undefined;
   }
 
   _getHeaderHeight(): number {
