@@ -1666,4 +1666,6 @@ class GridLayout extends LitElement {
   }
 }
 
-customElements.define("sections-grid-layout", GridLayout);
+if (!customElements.get("sections-grid-layout")) {
+  customElements.define("sections-grid-layout", GridLayout);
+}
