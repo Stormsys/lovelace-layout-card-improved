@@ -1075,9 +1075,8 @@ class GridLayout extends LitElement {
       }
       .section-grid-label {
         position: absolute;
-        top: 4px;
-        left: 50%;
-        transform: translateX(-50%);
+        bottom: 4px;
+        right: 4px;
         display: flex;
         align-items: center;
         gap: 6px;
