@@ -904,14 +904,21 @@ class GridLayout extends LitElement {
               const inner = serialize(item, indent + 2).replace(/^\s+/, "");
               lines.push(`${pad}  - ${inner}`);
             } else {
-              lines.push(`${pad}  - ${this._yamlScalar(item)}`);
+              lines.push(`${pad}  - ${this._yamlScalar(item, indent + 1)}`);
             }
           }
         } else if (typeof value === "object") {
           lines.push(`${pad}${key}:`);
           lines.push(serialize(value, indent + 1));
+        } else if (typeof value === "string" && value.includes("\n")) {
+          // Multiline string: use YAML block literal style (|)
+          const innerPad = "  ".repeat(indent + 1);
+          lines.push(`${pad}${key}: |`);
+          for (const sline of value.split("\n")) {
+            lines.push(sline === "" ? "" : `${innerPad}${sline}`);
+          }
         } else {
-          lines.push(`${pad}${key}: ${this._yamlScalar(value)}`);
+          lines.push(`${pad}${key}: ${this._yamlScalar(value, indent)}`);
         }
       }
       return lines.join("\n");
@@ -919,7 +926,7 @@ class GridLayout extends LitElement {
     return serialize(config, 0);
   }
 
-  _yamlScalar(value: any): string {
+  _yamlScalar(value: any, _indent: number = 0): string {
     if (typeof value === "string") {
       if (value === "" || value === "true" || value === "false" ||
           value === "null" || value === "~" ||
@@ -927,7 +934,7 @@ class GridLayout extends LitElement {
           value.includes("#") || value.includes("{") ||
           value.includes("[") || value.startsWith("'") ||
           value.startsWith('"') || value.startsWith("&") ||
-          value.startsWith("*") || value.includes("\n")) {
+          value.startsWith("*")) {
         return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
       }
       return value;
